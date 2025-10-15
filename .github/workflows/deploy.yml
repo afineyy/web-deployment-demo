@@ -1,0 +1,31 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Auto Deploy Web App to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create private key file
+        run: |
+          echo "${{ secrets.EC2_KEY }}" > ec2_key.pem
+          chmod 600 ec2_key.pem
+
+      - name: Deploy files to EC2
+        run: |
+          scp -o StrictHostKeyChecking=no -i ec2_key.pem -r * ${{ secrets.EC2_USER }}@${{ secrets.EC2_IP }}:/var/www/html/
+
+      - name: Restart Apache on EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_IP }} "sudo systemctl restart apache2"
+
+      - name: Cleanup
+        run: rm -f ec2_key.pem
